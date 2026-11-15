@@ -1,0 +1,410 @@
+/* ============================================================================
+   ANIMATIONS: the one file for slide transitions and element animations.
+
+   1. Variables       timing, distance, easing
+   2. Slide transitions   data-transition="rise" on a <section>
+   3. Element presets     data-anim="fade-up" or class="anim-fade-up"
+   4. Reduced motion
+   5. Click to enlarge    data-zoom="grow" on an <img>
+
+   How to add your own preset: see README, "Change animations".
+   ========================================================================= */
+
+:root {
+  /* --- Slide transitions --- */
+  --slide-transition: rise; /* default for every slide; read by src/main.js */
+  --slide-out-duration: 320ms; /* old slide leaves */
+  --slide-in-duration: 760ms; /* new slide arrives */
+  --slide-in-delay: 240ms; /* gap, so two slides never overlap in full */
+  --slide-distance: 56px;
+  --slide-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* --- Morph (data-transition="morph") --- */
+  --morph-duration: 900ms; /* matched objects travel this long */
+  --morph-ease: cubic-bezier(0.65, 0, 0.35, 1);
+  --morph-fade: 380ms; /* what has no partner fades out this fast */
+
+  /* --- Click to enlarge (data-zoom on an image) --- */
+  --zoom-duration: 520ms;
+  --zoom-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --zoom-backdrop: rgba(0, 0, 0, 0.88); /* what covers the slide behind the image */
+
+  /* --- Element animations --- */
+  --anim-duration: 820ms;
+  --anim-delay: 380ms; /* wait for the slide itself to arrive */
+  --anim-stagger: 110ms; /* delay added per child in a stagger */
+  --anim-distance: 44px;
+  --anim-scale: 0.94;
+  --anim-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --anim-from: translate3d(0, var(--anim-distance), 0); /* default = fade-up */
+}
+
+/* ----------------------------------------------------------------------------
+   2. SLIDE TRANSITIONS
+   reveal.js marks slides as .past, .present, .future. A transition only has
+   to say how a slide looks when it is NOT present.
+
+   Use on one slide:   <section data-transition="wipe">
+   Built into reveal:  none, fade, slide, convex, concave, zoom
+   Defined here:       rise, drift, wipe, cut, morph
+   -------------------------------------------------------------------------- */
+
+/* Shared timing for the transitions defined in this file: out fast, in slow. */
+.reveal:is(.rise, .drift, .wipe) .slides section:not([data-transition]),
+.reveal .slides section:is([data-transition='rise'], [data-transition='drift'], [data-transition='wipe'], [data-transition='morph']) {
+  transition:
+    opacity var(--slide-out-duration) ease,
+    transform var(--slide-out-duration) ease,
+    clip-path var(--slide-out-duration) ease,
+    visibility 0s linear var(--slide-out-duration);
+}
+
+.reveal:is(.rise, .drift, .wipe) .slides section.present:not([data-transition]),
+.reveal .slides section.present:is([data-transition='rise'], [data-transition='drift'], [data-transition='wipe'], [data-transition='morph']) {
+  transition:
+    opacity var(--slide-in-duration) var(--slide-ease) var(--slide-in-delay),
+    transform var(--slide-in-duration) var(--slide-ease) var(--slide-in-delay),
+    clip-path var(--slide-in-duration) var(--slide-ease) var(--slide-in-delay),
+    visibility 0s;
+}
+
+/* rise: fade, new slide comes up from below */
+.reveal.rise .slides section.past:not([data-transition]),
+.reveal .slides section:is([data-transition='rise'], [data-transition='morph']).past {
+  opacity: 0;
+  transform: translate3d(0, calc(var(--slide-distance) * -0.4), 0);
+}
+.reveal.rise .slides section.future:not([data-transition]),
+.reveal .slides section:is([data-transition='rise'], [data-transition='morph']).future {
+  opacity: 0;
+  transform: translate3d(0, var(--slide-distance), 0);
+}
+
+/* drift: fade, horizontal */
+.reveal.drift .slides section.past:not([data-transition]),
+.reveal .slides section[data-transition='drift'].past {
+  opacity: 0;
+  transform: translate3d(calc(var(--slide-distance) * -1), 0, 0);
+}
+.reveal.drift .slides section.future:not([data-transition]),
+.reveal .slides section[data-transition='drift'].future {
+  opacity: 0;
+  transform: translate3d(var(--slide-distance), 0, 0);
+}
+
+/* wipe: hard edge reveal from the left */
+.reveal.wipe .slides section.past:not([data-transition]),
+.reveal .slides section[data-transition='wipe'].past {
+  opacity: 0;
+  clip-path: inset(0 0 0 100%);
+}
+.reveal.wipe .slides section.future:not([data-transition]),
+.reveal .slides section[data-transition='wipe'].future {
+  opacity: 0;
+  clip-path: inset(0 100% 0 0);
+}
+.reveal.wipe .slides section.present:not([data-transition]),
+.reveal .slides section[data-transition='wipe'].present {
+  clip-path: inset(0 0 0 0);
+}
+
+/* cut: no slide motion at all, only the background moves */
+.reveal.cut .slides section:not([data-transition]),
+.reveal .slides section[data-transition='cut'] {
+  transition: none;
+}
+.reveal.cut .slides section:not(.present):not([data-transition]),
+.reveal .slides section[data-transition='cut']:not(.present) {
+  opacity: 0;
+}
+
+/* morph: objects that are on both slides glide from their old place, size and
+   colour to the new ones; the rest fades. The matching and motion are done by
+   src/morph.js. A morph slide reached from anywhere but its neighbour, or left
+   towards a slide that is not a morph, uses "rise" (rules above). */
+
+@keyframes morph-out {
+  from { opacity: 1; visibility: visible; }
+  to { opacity: 0; visibility: hidden; }
+}
+
+/* The old slide: its unmatched objects fade out... */
+.reveal .slides > section.morph-leaving:not(.present) {
+  animation: morph-out var(--morph-fade) ease both;
+  transform: none !important;
+  clip-path: none !important;
+}
+
+/* ...and the matched ones vanish at once, their twins take over on the new slide. */
+.reveal .slides > section.morph-leaving [data-auto-animate-target=''] {
+  visibility: hidden;
+}
+
+/* ----------------------------------------------------------------------------
+   3. ELEMENT PRESETS
+   Put data-anim="name" (or class="anim-name") on any element in a slide.
+   The element starts at --anim-from and settles when its slide is on screen.
+
+     data-anim="fade-up"            one element (also: fade-down, slide-in,
+                                    slide-in-right, scale, fade, wipe, wipe-rise)
+     data-anim="stagger"            every child, one after another (fade-up)
+     data-anim="stagger slide-in"   every child, one after another, slide-in
+     style="--anim-delay: 900ms"    fine tune one element
+     class="fragment" data-anim="scale"   plays on the next click instead
+
+   A preset is one rule that sets --anim-from. Nothing else is needed.
+   -------------------------------------------------------------------------- */
+
+/* Every animated element starts from these, so a preset never leaks into
+   animated elements nested inside it. */
+[data-anim],
+[class*='anim-'] {
+  --anim-opacity: 0; /* 0 = fades in, 1 = visible from the start */
+  --anim-clip: none; /* clip-path at the start */
+  --anim-clip-to: none; /* clip-path when settled */
+}
+
+[data-anim~='fade-up'],
+.anim-fade-up {
+  --anim-from: translate3d(0, var(--anim-distance), 0);
+}
+
+[data-anim~='fade-down'],
+.anim-fade-down {
+  --anim-from: translate3d(0, calc(var(--anim-distance) * -1), 0);
+}
+
+[data-anim~='slide-in'],
+.anim-slide-in {
+  --anim-from: translate3d(calc(var(--anim-distance) * -2), 0, 0);
+}
+
+[data-anim~='slide-in-right'],
+.anim-slide-in-right {
+  --anim-from: translate3d(calc(var(--anim-distance) * 2), 0, 0);
+}
+
+[data-anim~='scale'],
+.anim-scale {
+  --anim-from: scale(var(--anim-scale));
+}
+
+[data-anim~='fade'],
+.anim-fade {
+  --anim-from: none;
+}
+
+/* wipe: uncovered from left to right by a hard edge, no fading.
+   (The insets are a little outside the box so italics are not cut.) */
+[data-anim~='wipe'],
+.anim-wipe {
+  --anim-from: none;
+  --anim-opacity: 1;
+  --anim-clip: inset(-20% 105% -20% -5%);
+  --anim-clip-to: inset(-20% -5% -20% -5%);
+}
+
+/* wipe-rise: the same edge, while the element also comes up from below.
+   This is how the title on the section divider slide appears. */
+[data-anim~='wipe-rise'],
+.anim-wipe-rise {
+  --anim-from: translate3d(0, var(--anim-distance), 0);
+  --anim-opacity: 1;
+  --anim-clip: inset(-20% 105% -20% -5%);
+  --anim-clip-to: inset(-20% -5% -20% -5%);
+}
+
+/* stagger: children get --i = 0, 1, 2 ... which multiplies --anim-stagger */
+:is([data-anim~='stagger'], .anim-stagger) > :nth-child(1) { --i: 0; }
+:is([data-anim~='stagger'], .anim-stagger) > :nth-child(2) { --i: 1; }
+:is([data-anim~='stagger'], .anim-stagger) > :nth-child(3) { --i: 2; }
+:is([data-anim~='stagger'], .anim-stagger) > :nth-child(4) { --i: 3; }
+:is([data-anim~='stagger'], .anim-stagger) > :nth-child(5) { --i: 4; }
+:is([data-anim~='stagger'], .anim-stagger) > :nth-child(6) { --i: 5; }
+:is([data-anim~='stagger'], .anim-stagger) > :nth-child(7) { --i: 6; }
+:is([data-anim~='stagger'], .anim-stagger) > :nth-child(8) { --i: 7; }
+:is([data-anim~='stagger'], .anim-stagger) > :nth-child(9) { --i: 8; }
+:is([data-anim~='stagger'], .anim-stagger) > :nth-child(10) { --i: 9; }
+:is([data-anim~='stagger'], .anim-stagger) > :nth-child(11) { --i: 10; }
+:is([data-anim~='stagger'], .anim-stagger) > :nth-child(12) { --i: 11; }
+
+/* --- Engine: you should not need to edit below this line ------------------ */
+
+/* Resting state, slide not on screen: hidden at the start position, no transition. */
+.reveal .slides section :is(
+    [data-anim]:not([data-anim~='stagger']),
+    [class*='anim-']:not(.anim-stagger),
+    :is([data-anim~='stagger'], .anim-stagger) > *
+  ) {
+  opacity: var(--anim-opacity, 0);
+  transform: var(--anim-from);
+  clip-path: var(--anim-clip, none);
+  transition: none;
+  will-change: opacity, transform;
+}
+
+/* Slide on screen: settle. Fragments wait until they are .visible. */
+.reveal .slides section.present :is(
+    [data-anim]:not([data-anim~='stagger']),
+    [class*='anim-']:not(.anim-stagger),
+    :is([data-anim~='stagger'], .anim-stagger) > *
+  ):is(:not(.fragment), .fragment.visible) {
+  opacity: 1;
+  transform: none;
+  clip-path: var(--anim-clip-to, none);
+  visibility: inherit;
+  transition:
+    opacity var(--anim-duration) var(--anim-ease),
+    transform var(--anim-duration) var(--anim-ease),
+    clip-path var(--anim-duration) var(--anim-ease);
+  transition-delay: calc(var(--anim-delay) + var(--i, 0) * var(--anim-stagger));
+}
+
+/* A fragment was already waiting on screen, so it needs no arrival delay. */
+.reveal .slides section.present .fragment.visible:is([data-anim], [class*='anim-']) {
+  transition-delay: calc(var(--i, 0) * var(--anim-stagger));
+}
+
+/* An object that morphs does not also play its preset: it is already moving.
+   The same goes for an animated group with a morphing object inside it.
+   (.reveal is repeated so this beats the "settle" rule above.) */
+.reveal.reveal.reveal .slides section :is(
+    [data-anim]:not([data-anim~='stagger']),
+    [class*='anim-']:not(.anim-stagger),
+    :is([data-anim~='stagger'], .anim-stagger) > *
+  ):is(
+    [data-auto-animate-target]:not([data-auto-animate-target^='unmatched']),
+    :has([data-auto-animate-target]:not([data-auto-animate-target^='unmatched']))
+  ) {
+  opacity: 1;
+  transform: none;
+  clip-path: none;
+  transition: none;
+}
+
+/* Overview (Esc), PDF export and the editor preview show everything at rest. */
+.reveal.overview .slides section :is([data-anim], [class*='anim-'], :is([data-anim~='stagger'], .anim-stagger) > *),
+.no-motion .reveal .slides section :is([data-anim], [class*='anim-'], :is([data-anim~='stagger'], .anim-stagger) > *) {
+  opacity: 1;
+  transform: none;
+  clip-path: none;
+  transition: none;
+}
+
+.no-motion .reveal .slides section {
+  transition: none !important;
+}
+
+/* ----------------------------------------------------------------------------
+   4. REDUCED MOTION
+   Slides cross-fade quickly, elements appear without movement.
+   The background jumps to its new state (see src/background/background.js).
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --slide-out-duration: 120ms;
+    --slide-in-duration: 160ms;
+    --slide-in-delay: 0ms;
+    --slide-distance: 0px;
+    --anim-duration: 160ms;
+    --anim-delay: 0ms;
+    --anim-stagger: 0ms;
+    --bg-dim-duration: 0ms;
+    --zoom-duration: 1ms;
+  }
+
+  .reveal .slides section :is([data-anim], [class*='anim-'], :is([data-anim~='stagger'], .anim-stagger) > *) {
+    transform: none !important;
+    clip-path: none !important;
+  }
+
+  .reveal .slides > section.morph-leaving {
+    animation: none;
+  }
+
+  .reveal .slides section,
+  .reveal .slides section.present {
+    transform: none !important;
+    clip-path: none !important;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   5. CLICK TO ENLARGE
+   An image with data-zoom="name" opens large when clicked (src/zoom.js).
+   A preset says how the large image looks at the moment it appears:
+
+     --zoom-from          its transform at the start
+     --zoom-from-opacity  1 to start visible, leave out to fade in
+     --zoom-origin        what the transform is measured from
+
+   Add your own the same way, then use data-zoom="yourname".
+   -------------------------------------------------------------------------- */
+
+/* grow: starts exactly on the small image and expands from there */
+.zoom-layer[data-zoom='grow'] {
+  --zoom-from: var(--zoom-grow); /* worked out per image by zoom.js */
+  --zoom-from-opacity: 1;
+  --zoom-origin: top left;
+}
+
+/* fade: appears in place */
+.zoom-layer[data-zoom='fade'] {
+  --zoom-from: none;
+}
+
+/* scale: fades in while growing a little */
+.zoom-layer[data-zoom='scale'] {
+  --zoom-from: scale(0.82);
+}
+
+/* rise: fades in while coming up from below */
+.zoom-layer[data-zoom='rise'] {
+  --zoom-from: translate3d(0, 14vh, 0);
+}
+
+/* --- Engine --- */
+
+.reveal img[data-zoom] {
+  cursor: zoom-in;
+}
+
+.reveal img[data-zoom]:focus-visible {
+  outline: 3px solid var(--violet-text);
+  outline-offset: 4px;
+}
+
+/* With "grow" the small image is the large one, so it leaves its place. */
+.reveal img.is-zoomed[data-zoom='grow'] {
+  opacity: 0;
+  transition: none;
+}
+
+.zoom-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  cursor: zoom-out;
+  background: transparent;
+  transition: background var(--zoom-duration) ease;
+}
+
+.zoom-layer img {
+  position: absolute;
+  max-width: none;
+  opacity: var(--zoom-from-opacity, 0);
+  transform: var(--zoom-from, none);
+  transform-origin: var(--zoom-origin, center);
+  transition:
+    transform var(--zoom-duration) var(--zoom-ease),
+    opacity var(--zoom-duration) ease;
+}
+
+.zoom-layer.is-open {
+  background: var(--zoom-backdrop);
+}
+
+.zoom-layer.is-open img {
+  opacity: 1;
+  transform: none;
+}

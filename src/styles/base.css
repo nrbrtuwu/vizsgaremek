@@ -1,0 +1,313 @@
+/* Page, background layers, reveal.js overrides, shared type and deck chrome. */
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--black);
+}
+
+/* ---- Background layers ---------------------------------------------------- */
+
+#bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+}
+
+/* Flat black scrim between the animation and the slides. Its opacity is set
+   from src/background/config.js (dim) or per slide with data-bg-dim="0.3". */
+#bg-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: var(--black);
+  opacity: var(--bg-dim, 0.5);
+  transition: opacity var(--bg-dim-duration, 900ms) ease;
+  pointer-events: none;
+}
+
+/* ---- reveal.js overrides -------------------------------------------------- */
+
+.reveal-viewport {
+  background: var(--black);
+  color: var(--text);
+}
+
+.reveal {
+  z-index: 1;
+  font-family: var(--font-sans);
+  font-size: var(--size-body);
+  font-weight: 400;
+  line-height: 1.38;
+  color: var(--text);
+  font-kerning: normal;
+  -webkit-font-smoothing: antialiased;
+}
+
+.reveal .slides {
+  text-align: left;
+}
+
+/* Every slide is a full 1920x1080 stage with a 12 column grid.
+   reveal.js sets display:grid on visible slides (see `display` in main.js). */
+.reveal .slides > section,
+.reveal .slides > section > section {
+  height: 100%;
+  box-sizing: border-box;
+  padding: var(--margin-y) var(--margin-x);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: auto;
+  column-gap: var(--gutter);
+  align-content: start;
+}
+
+.reveal .slides section > * {
+  grid-column: 1 / -1;
+}
+
+/* ---- Type ----------------------------------------------------------------- */
+
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal p,
+.reveal ul,
+.reveal ol,
+.reveal figure,
+.reveal blockquote {
+  margin: 0;
+}
+
+.reveal h1 {
+  font-size: var(--size-h1);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.reveal h2 {
+  font-size: var(--size-h2);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+}
+
+.reveal h3 {
+  font-size: var(--size-h3);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+
+.reveal p {
+  max-width: 34em;
+}
+
+.reveal p + p {
+  margin-top: 0.8em;
+}
+
+/* Serif italic is the second voice: emphasis, quotes, single words in titles. */
+.reveal em,
+.reveal .serif {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.reveal h1 em,
+.reveal h2 em {
+  font-size: 1.06em;
+}
+
+.reveal strong {
+  font-weight: 600;
+}
+
+.reveal a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.18em;
+}
+
+.reveal .lead {
+  font-size: var(--size-lead);
+  font-weight: 300;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.reveal .muted {
+  color: var(--text-muted);
+}
+
+.reveal .small {
+  font-size: var(--size-small);
+}
+
+/* Mono label: eyebrows, captions, indexes. */
+.reveal .label {
+  font-family: var(--font-mono);
+  font-size: var(--size-label);
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.reveal .accent {
+  color: var(--violet-text);
+}
+
+.reveal hr,
+.reveal .rule {
+  border: 0;
+  height: 1px;
+  margin: 0;
+  background: var(--rule-strong);
+}
+
+.reveal ul,
+.reveal ol {
+  padding: 0;
+  list-style: none;
+}
+
+.reveal ul > li {
+  position: relative;
+  padding-left: 1.3em;
+}
+
+.reveal ul > li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 0.62em;
+  height: 2px;
+  background: var(--violet);
+}
+
+.reveal li + li {
+  margin-top: 0.45em;
+}
+
+.reveal img {
+  display: block;
+  max-width: 100%;
+}
+
+/* ---- Free elements ---------------------------------------------------------
+   Anything with class="box" directly inside a slide is placed by hand:
+   left / top / width in px on the 1920x1080 stage. The editor writes these. */
+
+.reveal .slides section > .box {
+  position: absolute;
+  grid-area: auto; /* measure from the slide's edge, not from the layout grid */
+  margin: 0;
+  max-width: none;
+  z-index: 2;
+}
+
+.reveal .slides section > img.box {
+  height: auto;
+}
+
+/* ---- Deck chrome ---------------------------------------------------------- */
+
+/* Corner tag: which layout and which file this slide is. Press T to hide. */
+.reveal .slides section[data-layout]::after {
+  content: attr(data-layout) '  /  ' attr(data-file);
+  position: absolute;
+  top: 44px;
+  right: 56px;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+  padding: 6px 12px;
+  background: var(--black);
+  z-index: 5;
+}
+
+.hide-tags .reveal .slides section[data-layout]::after {
+  display: none;
+}
+
+.reveal .wordmark {
+  position: absolute;
+  left: 2.9vw;
+  bottom: 2.6vh;
+  z-index: 30;
+  font-family: var(--font-sans);
+  font-size: max(13px, 1.05vw);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  transition: opacity 400ms ease;
+}
+
+/* Slides that already show the wordmark large, or carry a full image. */
+body:is([data-layout='title'], [data-layout='closing'], [data-layout='full-bleed']) .wordmark {
+  opacity: 0;
+}
+
+.reveal .slide-number {
+  right: 2.9vw;
+  bottom: 2.6vh;
+  padding: 0;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: max(12px, 0.95vw);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+/* On a full image the number gets the same flat box as the corner tag. */
+body[data-layout='full-bleed'] .reveal .slide-number {
+  padding: 6px 12px;
+  background: var(--black);
+  color: var(--text);
+}
+
+.reveal .slide-number a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.reveal .slide-number .slide-number-delimiter {
+  margin: 0 0.35em;
+}
+
+.reveal .progress {
+  height: max(3px, 0.35vh);
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--violet);
+}
+
+/* Markdown slides get a simple single column. */
+.reveal .md > * + * {
+  margin-top: 0.7em;
+}
+
+.reveal .md {
+  align-self: center;
+  grid-column: 1 / span 9;
+}
+
+.reveal section[data-layout='markdown'],
+.reveal section[data-layout='blank'] {
+  align-content: center;
+  row-gap: 40px;
+}

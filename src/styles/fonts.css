@@ -1,0 +1,36 @@
+/* All fonts are bundled from node_modules. No network needed.
+   A font file is only loaded by the browser when a slide really uses it. */
+
+/* --- The fogya.tech fonts (from the fogya-tech repo) --- */
+@import '@fontsource/figtree/300.css';
+@import '@fontsource/figtree/400.css';
+@import '@fontsource/figtree/500.css';
+@import '@fontsource/figtree/600.css';
+@import '@fontsource/instrument-serif/400.css';
+@import '@fontsource/instrument-serif/400-italic.css';
+@import '@fontsource/geist-mono/400.css';
+@import '@fontsource/geist-mono/500.css';
+
+/* --- Extra fonts you can pick in the editor (list: src/editor/fonts.js) ---
+   "Variable" fonts carry every weight in one file. */
+@import '@fontsource-variable/montserrat/wght.css';
+@import '@fontsource-variable/open-sans/wght.css';
+@import '@fontsource-variable/roboto/wght.css';
+@import '@fontsource-variable/raleway/wght.css';
+@import '@fontsource-variable/nunito/wght.css';
+@import '@fontsource-variable/source-sans-3/wght.css';
+@import '@fontsource-variable/oswald/wght.css';
+@import '@fontsource-variable/playfair-display/wght.css';
+@import '@fontsource-variable/roboto-mono/wght.css';
+@import '@fontsource-variable/jetbrains-mono/wght.css';
+@import '@fontsource/lato/300.css';
+@import '@fontsource/lato/400.css';
+@import '@fontsource/lato/700.css';
+@import '@fontsource/poppins/300.css';
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/500.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
+@import '@fontsource/merriweather/400.css';
+@import '@fontsource/merriweather/700.css';
+@import '@fontsource/bebas-neue/400.css';

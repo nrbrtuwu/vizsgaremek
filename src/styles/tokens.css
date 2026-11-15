@@ -1,0 +1,36 @@
+/* Design tokens. Colors and fonts come from the fogya-tech repo.
+   All sizes are px on the fixed 1920x1080 stage; reveal.js scales the stage. */
+:root {
+  /* Color */
+  --black: #000000;
+  --white: #ffffff;
+  --violet: #8b5cf6; /* brand accent: rules, markers, large numerals */
+  --violet-deep: #4c1d95;
+  --indigo: #1e1b4b;
+  --violet-text: #b9a2fb; /* lighter tint of the accent, for small text */
+
+  --text: var(--white);
+  --text-muted: rgba(255, 255, 255, 0.74);
+  --rule: rgba(255, 255, 255, 0.3);
+  --rule-strong: rgba(255, 255, 255, 0.9);
+  --surface: rgba(0, 0, 0, 0.75); /* flat panel behind code and tables */
+
+  /* Type */
+  --font-sans: 'Figtree', system-ui, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-mono: 'Geist Mono', ui-monospace, Consolas, monospace;
+
+  --size-display: 200px;
+  --size-h1: 128px;
+  --size-h2: 84px;
+  --size-h3: 44px;
+  --size-lead: 44px;
+  --size-body: 34px;
+  --size-small: 26px;
+  --size-label: 20px;
+
+  /* Grid: 12 columns inside wide margins */
+  --margin-x: 128px;
+  --margin-y: 112px;
+  --gutter: 32px;
+}

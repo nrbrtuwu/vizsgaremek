@@ -1,0 +1,120 @@
+/* Code blocks and highlight.js colours, built from the deck tokens.
+   Two tones only: white for code, the violet tint for structure. */
+
+/* The frame around a code block: in the code layout, or placed with the editor. */
+.reveal .code-panel {
+  border: 1px solid var(--rule);
+  background: var(--surface);
+}
+
+/* A code block placed by hand takes its text size from the block itself,
+   so the editor's Size field works on it. */
+.reveal .box.code-panel {
+  font-size: 22px;
+}
+
+.reveal .box.code-panel pre {
+  font-size: inherit;
+}
+
+.reveal pre {
+  margin: 0;
+  width: auto;
+  box-shadow: none;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  line-height: 1.6;
+  tab-size: 2;
+}
+
+.reveal pre code {
+  display: block;
+  max-height: none;
+  padding: 36px 40px 40px;
+  overflow: hidden;
+  font-family: inherit;
+  white-space: pre;
+  color: var(--white);
+  background: none;
+}
+
+.reveal code {
+  font-family: var(--font-mono);
+}
+
+.reveal :not(pre) > code {
+  font-size: 0.86em;
+  padding: 0.08em 0.3em;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.hljs-comment,
+.hljs-quote,
+.hljs-meta {
+  color: rgba(255, 255, 255, 0.72);
+  font-style: normal;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-type,
+.hljs-attr,
+.hljs-attribute,
+.hljs-tag,
+.hljs-name {
+  color: var(--violet-text);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-symbol {
+  color: #dcd0ff;
+}
+
+.hljs-number,
+.hljs-literal {
+  color: #dcd0ff;
+}
+
+.hljs-title,
+.hljs-title.function_,
+.hljs-title.class_,
+.hljs-section {
+  color: var(--white);
+  font-weight: 500;
+}
+
+.hljs-variable,
+.hljs-params,
+.hljs-property,
+.hljs-operator,
+.hljs-punctuation {
+  color: var(--white);
+}
+
+/* Line numbers (data-line-numbers on <code>) */
+.reveal .hljs-ln {
+  border-collapse: collapse;
+}
+
+.reveal .hljs-ln td {
+  padding: 0;
+  border: 0;
+}
+
+.reveal .hljs-ln-numbers {
+  padding-right: 28px !important;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.5);
+  user-select: none;
+}
+
+/* Highlighted lines: data-line-numbers="3-5". Other lines step back. */
+.reveal .hljs.has-highlights tr:not(.highlight-line) {
+  opacity: 0.75;
+}
+
+.reveal .hljs.has-highlights tr.highlight-line .hljs-ln-numbers {
+  color: var(--violet-text);
+}

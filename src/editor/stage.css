@@ -1,0 +1,134 @@
+/* Styles for the editable slide inside /editor. Loaded only with ?edit. */
+
+.is-editing,
+.is-editing * {
+  cursor: default;
+}
+
+.is-editing .reveal .slides section {
+  user-select: none;
+}
+
+/* Everything on the current slide is clickable and visible while editing. */
+.is-editing .reveal .slides section.present * {
+  pointer-events: auto;
+}
+
+.is-editing .reveal .fragment {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.is-editing .reveal .slides section .fx-editing,
+.is-editing .reveal .slides section .fx-editing * {
+  user-select: text;
+  cursor: text;
+}
+
+.is-editing .fx-editing {
+  outline: none;
+}
+
+/* An empty shape or text box still needs something to grab. */
+.is-editing .reveal .slides section > .box:empty:not(img) {
+  min-width: 24px;
+  min-height: 24px;
+}
+
+/* ---- Selection overlay ---------------------------------------------------- */
+
+#fx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.fx-hover,
+.fx-sel {
+  position: absolute;
+  box-sizing: border-box;
+  display: none;
+}
+
+.fx-hover {
+  border: 1px solid rgba(185, 162, 251, 0.9);
+}
+
+.fx-sel {
+  border: 2px solid #8b5cf6;
+}
+
+.fx-sel.is-typing {
+  border-style: dashed;
+}
+
+.fx-tag {
+  position: absolute;
+  left: -2px;
+  bottom: 100%;
+  padding: 2px 7px;
+  background: #8b5cf6;
+  color: #000;
+  font: 500 11px/1.4 'Geist Mono', ui-monospace, Consolas, monospace;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.fx-sel [data-handle] {
+  position: absolute;
+  display: none;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  background: #fff;
+  border: 2px solid #8b5cf6;
+  pointer-events: auto;
+}
+
+.fx-sel.h-sides [data-handle='e'],
+.fx-sel.h-sides [data-handle='w'],
+.fx-sel.h-corners [data-handle='nw'],
+.fx-sel.h-corners [data-handle='ne'],
+.fx-sel.h-corners [data-handle='sw'],
+.fx-sel.h-corners [data-handle='se'],
+.fx-sel.h-all [data-handle] {
+  display: block;
+}
+
+[data-handle='nw'] { left: -7px; top: -7px; cursor: nwse-resize; }
+[data-handle='n'] { left: calc(50% - 6px); top: -7px; cursor: ns-resize; }
+[data-handle='ne'] { right: -7px; top: -7px; cursor: nesw-resize; }
+[data-handle='e'] { right: -7px; top: calc(50% - 6px); cursor: ew-resize; }
+[data-handle='se'] { right: -7px; bottom: -7px; cursor: nwse-resize; }
+[data-handle='s'] { left: calc(50% - 6px); bottom: -7px; cursor: ns-resize; }
+[data-handle='sw'] { left: -7px; bottom: -7px; cursor: nesw-resize; }
+[data-handle='w'] { left: -7px; top: calc(50% - 6px); cursor: ew-resize; }
+
+/* Lines shown while an element is snapped to something. */
+.fx-guide {
+  position: absolute;
+  display: none;
+  background: #fff;
+}
+
+.fx-guide-x {
+  width: 1px;
+}
+
+.fx-guide-y {
+  height: 1px;
+}
+
+.fx-drop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: none;
+  border: 3px dashed #8b5cf6;
+  pointer-events: none;
+}
+
+.fx-drop.is-on {
+  display: block;
+}

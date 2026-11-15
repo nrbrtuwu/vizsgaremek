@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" preserveAspectRatio="xMidYMid slice">
+  <rect width="1000" height="1000" fill="#221c3a"/>
+  <g stroke="#ffffff" stroke-opacity="0.35" stroke-width="2" fill="none">
+    <line x1="0" y1="0" x2="1000" y2="1000"/>
+    <line x1="1000" y1="0" x2="0" y2="1000"/>
+    <rect x="1" y="1" width="998" height="998"/>
+  </g>
+  <rect x="310" y="466" width="380" height="68" fill="#000000"/>
+  <text x="500" y="509" text-anchor="middle" font-family="ui-monospace, Consolas, monospace" font-size="24" letter-spacing="3" fill="#ffffff">IMAGE 1:1</text>
+</svg>

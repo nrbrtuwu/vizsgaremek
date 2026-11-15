@@ -1,0 +1,27 @@
+<section data-layout="code">
+  <div class="stack" data-anim="stagger">
+    <p class="label">Tempor incididunt</p>
+    <h2 style="font-family: &quot;Montserrat Variable&quot;, system-ui, sans-serif; font-weight: 600;">Code block</h2>
+    <p class="muted">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Use <code>data-line-numbers="3-6"</code> to point at lines.</p>
+  </div>
+
+  <div class="code-panel" data-anim="fade-up" style="--anim-delay: 560ms">
+    <div class="code-file label"><span>src/lorem.js</span><span>JavaScript</span></div>
+    <pre><code class="language-javascript" data-trim="" data-line-numbers="3-6">
+// Lorem ipsum dolor sit amet
+export async function loadItems(userId) {
+  const response = await fetch(`/api/users/${userId}/items`);
+  if (!response.ok) {
+    throw new Error(`Failed: ${response.status}`);
+  }
+
+  const items = await response.json();
+  return items
+    .filter((item) =&gt; item.active)
+    .map((item) =&gt; ({ id: item.id, title: item.title }));
+}
+    </code></pre>
+  </div>
+
+  <aside class="notes">Code with syntax highlighting. Change the language with class="language-xxx".</aside>
+</section>
