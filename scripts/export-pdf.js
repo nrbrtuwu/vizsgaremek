@@ -48,7 +48,7 @@ if (!browser) {
 const server = await createServer({ root, logLevel: 'warn', server: { port: 5199, strictPort: false } });
 await server.listen();
 const { port } = server.httpServer.address();
-// ?export: no animations, no layout tags, background jumps straight to each frame.
+// ?export: no animations, background jumps straight to each frame.
 const url = `http://127.0.0.1:${port}/?export`;
 
 const decktape = createRequire(import.meta.url).resolve('decktape/decktape.js');

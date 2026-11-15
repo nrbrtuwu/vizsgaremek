@@ -222,28 +222,6 @@ body {
 
 /* ---- Deck chrome ---------------------------------------------------------- */
 
-/* Corner tag: which layout and which file this slide is. Press T to hide. */
-.reveal .slides section[data-layout]::after {
-  content: attr(data-layout) '  /  ' attr(data-file);
-  position: absolute;
-  top: 44px;
-  right: 56px;
-  font-family: var(--font-mono);
-  font-size: 18px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  white-space: nowrap;
-  padding: 6px 12px;
-  background: var(--black);
-  z-index: 5;
-}
-
-.hide-tags .reveal .slides section[data-layout]::after {
-  display: none;
-}
-
 .reveal .wordmark {
   position: absolute;
   left: 2.9vw;
@@ -274,7 +252,7 @@ body:is([data-layout='title'], [data-layout='closing'], [data-layout='full-bleed
   color: var(--text-muted);
 }
 
-/* On a full image the number gets the same flat box as the corner tag. */
+/* On a full image the number gets a flat black box, so it stays readable. */
 body[data-layout='full-bleed'] .reveal .slide-number {
   padding: 6px 12px;
   background: var(--black);

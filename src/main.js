@@ -21,7 +21,6 @@ const params = new URLSearchParams(location.search);
 const isExport = params.has('export'); // used by `npm run pdf`
 const isEdit = params.has('edit'); // the stage inside /editor
 if (isExport || isEdit) document.documentElement.classList.add('no-motion');
-if (isExport || params.has('notags')) document.documentElement.classList.add('hide-tags');
 
 const slidesEl = document.querySelector('.reveal .slides');
 
@@ -67,6 +66,9 @@ const deck = new Reveal(document.querySelector('.reveal'), {
   backgroundTransition: 'fade',
   hideCursorTime: 2500,
   pdfSeparateFragments: false,
+  // Never switch to reveal's scrolling "mobile" view: the deck is a fixed stage,
+  // also when it is shown small (for example inside the editor).
+  scrollActivationWidth: null,
 
   // Morph (data-transition="morph"), see src/morph.js. Off while editing and
   // for people who asked their system for less motion.
@@ -129,10 +131,6 @@ let stage = null; // the editing layer, only inside /editor
 
 deck.initialize().then(async () => {
   applySlideState(undefined, { immediate: true });
-  // T toggles the layout tags in the corner.
-  deck.addKeyBinding({ keyCode: 84, key: 'T', description: 'Toggle layout tags' }, () =>
-    document.documentElement.classList.toggle('hide-tags'),
-  );
 
   if (isEdit) {
     const { initStage } = await import('./editor/stage.js');

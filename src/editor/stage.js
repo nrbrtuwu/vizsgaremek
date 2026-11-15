@@ -17,7 +17,16 @@ const NOT_TEXT = new Set(['IMG', 'FIGURE', 'TABLE', 'PRE', 'HR', 'SECTION', 'UL'
 const NO_DETACH = new Set(['LI', 'TD', 'TH', 'TR', 'DT', 'DD', 'TBODY', 'THEAD']);
 // The parts of an element's look that come from its slide layout. Copy takes
 // them along, so a pasted title still looks like the title it was.
-const COPIED_LOOK = ['font-family', 'font-size', 'font-weight', 'font-style', 'line-height', 'letter-spacing', 'text-transform', 'text-align', 'color'];
+const COPIED_LOOK = [
+  'font-family', 'font-size', 'font-weight', 'font-style', 'line-height', 'letter-spacing', 'text-transform', 'text-align',
+  'font-variant-numeric', 'white-space', 'color', 'background-color', 'padding',
+  'border-top', 'border-right', 'border-bottom', 'border-left',
+];
+// Parts inside the copied element also keep how they are laid out in it.
+const INNER_LOOK = [...COPIED_LOOK, 'display', 'margin', 'gap', 'grid-template-columns', 'align-items', 'align-content', 'justify-content', 'min-height'];
+// The copied element itself: everything except its outer margin, which a
+// free box does not have.
+const ROOT_LOOK = INNER_LOOK.filter((prop) => prop !== 'margin');
 const round = Math.round;
 const escAttr = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 
@@ -742,6 +751,58 @@ export function initStage(ctx) {
       img.src = url;
     });
 
+  // ---- Copying an element's exact look ---------------------------------------
+  // A lot of how an element looks comes from the slide it is on (its layout's
+  // CSS). To paste it elsewhere unchanged, Copy records how every part is
+  // drawn, and Paste writes down only the values that would otherwise differ.
+
+  // The element and everything inside it, except the inside of a code block
+  // (the highlighter rewrites that, and it looks the same everywhere).
+  const lookParts = (rootEl) => [rootEl, ...[...rootEl.querySelectorAll('*')].filter((n) => !n.closest('pre'))];
+
+  function readLook(el, inner) {
+    const cs = getComputedStyle(el);
+    const look = {};
+    for (const prop of inner ? INNER_LOOK : ROOT_LOOK) look[prop] = cs.getPropertyValue(prop);
+    return look;
+  }
+
+  function applyLooks(rootEl, looks) {
+    let parts = lookParts(rootEl);
+    if (parts.length !== looks.length) parts = [rootEl]; // structure differs: do the element itself
+    parts.forEach((el, i) => {
+      const want = looks[i];
+      const size = parseFloat(want['font-size']) || 1;
+      for (const prop of i > 0 ? INNER_LOOK : ROOT_LOOK) {
+        let value = want[prop];
+        if (value == null || value === '' || getComputedStyle(el).getPropertyValue(prop) === value) continue;
+        // Spacing stays relative to the text size, so resizing the text later still looks right.
+        if (prop === 'line-height' && value.endsWith('px')) value = String(Math.round((parseFloat(value) / size) * 1000) / 1000);
+        if (prop === 'letter-spacing' && value.endsWith('px')) value = `${Math.round((parseFloat(value) / size) * 1000) / 1000}em`;
+        both(el, (e) => e.style.setProperty(prop, value));
+      }
+    });
+  }
+
+  // A child of a staggered group has no animation of its own: it gets the
+  // group's preset and a delay from its place in the group. Work that out, so
+  // a copy of just this child animates the same way.
+  function inheritedAnim(el, twin) {
+    if (twin.hasAttribute('data-anim') || /(^|\s)anim-/.test(twin.className)) return null;
+    const parent = el.parentElement;
+    if (!parent || parent === live) return null;
+    const tokens = (parent.getAttribute('data-anim') || '').split(/\s+/).filter(Boolean);
+    if (!tokens.includes('stagger') && !parent.classList.contains('anim-stagger')) return null;
+    const cs = getComputedStyle(el);
+    const ms = (name) => {
+      const v = cs.getPropertyValue(name).trim();
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? (v.endsWith('ms') ? n : n * 1000) : 0;
+    };
+    const index = parseFloat(cs.getPropertyValue('--i')) || 0;
+    return { preset: tokens.find((t) => t !== 'stagger') || 'fade-up', delay: `${Math.round(ms('--anim-delay') + index * ms('--anim-stagger'))}ms` };
+  }
+
   // ---- Public API (called by src/editor/editor.js in the parent page) -------
 
   const api = {
@@ -888,16 +949,17 @@ export function initStage(ctx) {
       const twin = srcOf(selected);
       const clone = twin.cloneNode(true);
       [clone, ...clone.querySelectorAll('*')].forEach((n) => n.removeAttribute('data-eid'));
-      const cs = getComputedStyle(selected);
-      const look = {};
-      for (const prop of COPIED_LOOK) look[prop] = cs.getPropertyValue(prop);
-      // Keep spacing relative to the text size, so the copy still looks right
-      // if its size is changed later.
-      const size = parseFloat(cs.fontSize) || 1;
-      const ratio = (value) => Math.round((parseFloat(value) / size) * 1000) / 1000;
-      if (look['line-height'].endsWith('px')) look['line-height'] = String(ratio(look['line-height']));
-      if (look['letter-spacing'].endsWith('px')) look['letter-spacing'] = `${ratio(look['letter-spacing'])}em`;
-      return { html: clone.outerHTML, box: isBox(selected), geo: geometry(selected), look, file, tag: selected.tagName };
+      return {
+        html: clone.outerHTML,
+        box: isBox(selected),
+        geo: geometry(selected),
+        // How the element and everything inside it is drawn right now.
+        looks: lookParts(selected).map((part, i) => readLook(part, i > 0)),
+        // The animation it gets from a staggered group, if it has none of its own.
+        anim: inheritedAnim(selected, twin),
+        file,
+        tag: selected.tagName,
+      };
     },
 
     /** Puts a copied element on this slide, as a free box in the same place. */
@@ -908,20 +970,20 @@ export function initStage(ctx) {
       if (!el) return;
       snapshot();
 
-      // An element that lived in a layout becomes a free box here, and keeps
-      // the look its old layout gave it.
+      // An element that lived in a layout becomes a free box here.
       if (!clip.box) {
         el.classList.add('box');
         el.style.removeProperty('translate');
         el.style.removeProperty('max-width');
         el.style.width = `${clip.geo.w}px`;
         if (clip.tag === 'FIGURE') el.style.height = `${clip.geo.h}px`;
-        const isPicture = ['IMG', 'FIGURE'].includes(clip.tag) || el.classList.contains('shape');
-        if (!isPicture) {
-          for (const [prop, value] of Object.entries(clip.look)) {
-            if (value && !el.style.getPropertyValue(prop)) el.style.setProperty(prop, value);
-          }
-        }
+      }
+
+      // It was animated as part of a staggered group: give it that animation
+      // and its own turn in the sequence.
+      if (clip.anim && !el.hasAttribute('data-anim')) {
+        el.setAttribute('data-anim', clip.anim.preset);
+        el.style.setProperty('--anim-delay', clip.anim.delay);
       }
 
       // Same place as the original; a little lower right if something of the
@@ -945,6 +1007,9 @@ export function initStage(ctx) {
       tagAll(el);
       rerender();
       selected = liveOf(el.dataset.eid);
+      // Whatever still looks different from the original (because this slide's
+      // layout styles it differently) is pinned to the original's values.
+      if (selected && clip.looks) applyLooks(selected, clip.looks);
       changed();
     },
 

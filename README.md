@@ -26,16 +26,13 @@ npm run dev
 | F | Fullscreen |
 | S | Speaker view with notes and timer |
 | Esc | Slide overview |
-| T | Show or hide the layout tags in the corner |
 | B | Black screen |
-
-Hide the layout tags before the real talk: press `T`, or open the deck as `/?notags`.
 
 ## Add a slide
 
 Every file in `slides/` is one slide. Files are shown in file name order, so the number at the front sets the position: `03-image-left.html` comes after `02-section.html`.
 
-1. Copy the file with the layout you like. The corner tag on each slide shows the layout name and the file name.
+1. Copy the file with the layout you like. The file names say which layout is which (`06-two-columns.html`), and the editor shows the layout name on the right when nothing is selected.
 2. Rename the copy, for example `07-results.html`.
 3. Edit the text. Save. The open deck updates by itself and stays on the same slide.
 
@@ -72,7 +69,14 @@ Open http://127.0.0.1:5173/editor while `npm run dev` is running. It works like 
 
 Controls that do not apply to the selection are greyed out.
 
-**Copy and paste.** Copy an element, open another slide in the list, paste. It lands in the same place it had on the first slide, as a free box; pasting again puts the next copy a little lower right. An element copied out of a layout (a title, for example) takes its font, size and colour along, so it looks the same on a slide with a different layout. The clipboard is the editor's own: it is kept while the editor tab is open and does not go to other programs.
+**Copy and paste.** Copy an element, open another slide in the list, paste. The copy is exact:
+
+- It lands in the same place and size, as a free box. Pasting again puts the next copy a little lower right.
+- It keeps every setting from the Design panel: font, size, weight, colour, alignment, animation preset and delay, click-to-enlarge, morph name, code language.
+- It keeps the look its old slide gave it. If the new slide's layout would draw it differently, the original values are written onto the copy. This also covers everything inside a copied group.
+- An element that was animated as part of a staggered group gets that preset and its own delay, so it still comes in at the same moment.
+
+Two things cannot travel: decorations drawn by a layout itself (the square markers on the timeline, for example), and a morph name that is already used on the target slide. The clipboard is the editor's own: it is kept while the editor tab is open and does not go to other programs.
 
 **Code blocks.** **Code** in the Insert group places a code block. Select it and type or paste your code into the **Code** box on the right; the slide shows it with syntax highlighting. Language, line numbers and text size are next to it. Drag its side handles to change the width.
 
@@ -111,7 +115,7 @@ Uploaded images are saved in `assets/`. The editor only writes plain HTML: a fre
 
 | Attribute on `<section>` | What it does |
 | --- | --- |
-| `data-layout` | Picks the layout CSS and fills the corner tag |
+| `data-layout` | Picks the layout CSS |
 | `data-transition` | Transition for this slide only (see below) |
 | `data-bg-dim` | How dark the scrim over the background is on this slide, 0 to 1 |
 | `data-background-image` | Full screen image behind the slide (see `05-full-bleed.html`) |
@@ -285,7 +289,7 @@ If text is hard to read on one slide, raise `data-bg-dim` on that slide. If the 
 npm run pdf
 ```
 
-Writes `fogya-tech-deck.pdf`, one 1920x1080 page per slide, with the background and without the layout tags. It uses the Chrome or Edge installed on the computer. Another file name: `npm run pdf -- talk.pdf`. Another browser: set `CHROME_PATH`.
+Writes `fogya-tech-deck.pdf`, one 1920x1080 page per slide, with the background. It uses the Chrome or Edge installed on the computer. Another file name: `npm run pdf -- talk.pdf`. Another browser: set `CHROME_PATH`.
 
 ## Files
 
@@ -300,7 +304,7 @@ src/zoom.js             click an image to enlarge it
 src/background/         config.js, the shader, the tween, easings
 src/styles/
   tokens.css            colours, fonts, sizes, grid
-  base.css              type and deck chrome (tag, wordmark, number, progress)
+  base.css              type and deck chrome (wordmark, number, progress)
   layouts.css           one block per data-layout
   animations.css        all transitions and presets
   code-theme.css        code block colours
