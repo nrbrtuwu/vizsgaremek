@@ -10,12 +10,14 @@ import './styles/base.css';
 import './styles/layouts.css';
 import './styles/code-theme.css';
 import './styles/animations.css';
+import './styles/pdf.css';
 
 import slides from 'virtual:slides';
 import { createBackground } from './background/background.js';
 import backgroundConfig from './background/config.js';
 import { morphConfig, prepareMorph, wireMorph } from './morph.js';
 import { prepareZoom, wireZoom } from './zoom.js';
+import { preparePdfs, wirePdfViewer } from './pdf.js';
 
 const params = new URLSearchParams(location.search);
 const isExport = params.has('export'); // used by `npm run pdf`
@@ -38,6 +40,7 @@ function renderSlides(list) {
   slidesEl.replaceChildren(...list.flatMap((s) => sectionsFor(s.file, s.html)));
   prepareMorph(slidesEl);
   if (!isEdit) prepareZoom(slidesEl);
+  preparePdfs(slidesEl);
 }
 
 renderSlides(slides);
@@ -108,6 +111,7 @@ function highlightCode(root = slidesEl) {
 deck.on('slidechanged', (e) => applySlideState(e.currentSlide));
 wireMorph(deck);
 if (!isEdit && !isExport) wireZoom(deck, slidesEl); // click an image to enlarge it
+if (!isEdit && !isExport) wirePdfViewer(deck, slidesEl); // click a PDF to read it
 
 // --- Swap slides in place (hot reload, editor) -----------------------------
 
@@ -115,6 +119,7 @@ function refresh() {
   const { h, v, f } = deck.getIndices();
   prepareMorph(slidesEl);
   if (!isEdit) prepareZoom(slidesEl);
+  preparePdfs(slidesEl);
   deck.sync();
   highlightCode();
   const last = deck.getHorizontalSlides().length - 1;

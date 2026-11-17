@@ -1,0 +1,185 @@
+/* PDFs on slides (src/pdf.js): the box on the slide and the full viewer. */
+
+/* ---- On the slide ---------------------------------------------------------- */
+
+.reveal [data-pdf] {
+  position: relative;
+  overflow: hidden;
+  background: #0b0b0d;
+  border: 1px solid var(--rule);
+}
+
+.reveal [data-pdf] .pdf-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: transparent;
+}
+
+/* Small flat label: it is a document, and how long it is. */
+.reveal [data-pdf] .pdf-badge {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  padding: 8px 14px;
+  background: var(--black);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.reveal [data-pdf].pdf-missing .pdf-badge {
+  color: #ff9d8a;
+}
+
+.reveal [data-pdf][data-zoom] {
+  cursor: zoom-in;
+}
+
+.reveal [data-pdf][data-zoom]:focus-visible {
+  outline: 3px solid var(--violet-text);
+  outline-offset: 4px;
+}
+
+/* ---- The viewer ------------------------------------------------------------ */
+
+.pdf-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: transparent;
+  transition: background var(--zoom-duration) ease;
+  font-family: var(--font-sans);
+  color: var(--white);
+}
+
+.pdf-viewer.is-open {
+  background: var(--zoom-backdrop);
+}
+
+/* How it opens: the same names as for images (animations.css, section 5). */
+.pdf-viewer[data-zoom='grow'],
+.pdf-viewer[data-zoom='scale'] {
+  --pdf-from: scale(0.9);
+}
+
+.pdf-viewer[data-zoom='fade'] {
+  --pdf-from: none;
+}
+
+.pdf-viewer[data-zoom='rise'] {
+  --pdf-from: translate3d(0, 14vh, 0);
+}
+
+.pdf-viewer .pdf-scroll,
+.pdf-viewer .pdf-bar {
+  opacity: 0;
+  transform: var(--pdf-from, none);
+  transition:
+    opacity var(--zoom-duration) ease,
+    transform var(--zoom-duration) var(--zoom-ease);
+}
+
+.pdf-viewer .pdf-bar {
+  transform: none;
+}
+
+.pdf-viewer.is-open :is(.pdf-scroll, .pdf-bar) {
+  opacity: 1;
+  transform: none;
+}
+
+.pdf-bar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 24px;
+  background: var(--black);
+  border-bottom: 1px solid var(--rule);
+}
+
+.pdf-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.pdf-count {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.pdf-tools {
+  display: flex;
+  gap: 6px;
+}
+
+.pdf-tools button {
+  appearance: none;
+  min-width: 36px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--white);
+  font: 500 14px var(--font-sans);
+  cursor: pointer;
+}
+
+.pdf-tools button:hover {
+  border-color: var(--white);
+}
+
+.pdf-tools .pdf-level {
+  min-width: 72px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.pdf-scroll {
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(255, 255, 255, 0.4) transparent;
+}
+
+.pdf-pages {
+  display: grid;
+  justify-items: center;
+  gap: 24px;
+  width: max-content;
+  min-width: 100%;
+  padding: 32px 48px 64px;
+  box-sizing: border-box;
+}
+
+.pdf-page {
+  background: #fff;
+  cursor: default;
+}
+
+.pdf-page canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pdf-viewer,
+.pdf-viewer .pdf-page {
+  user-select: none;
+  -webkit-user-drag: none;
+}

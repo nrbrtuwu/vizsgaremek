@@ -17,6 +17,7 @@
             <button class="btn" id="add-text" type="button">Text</button>
             <button class="btn" id="add-heading" type="button">Heading</button>
             <button class="btn" id="add-image" type="button" aria-haspopup="dialog">Image</button>
+            <button class="btn" id="add-pdf" type="button" aria-haspopup="dialog">PDF</button>
             <button class="btn" id="add-rect" type="button">Rectangle</button>
             <button class="btn" id="add-code" type="button">Code</button>
           </div>
@@ -27,6 +28,10 @@
           <div class="rtools">
             <select id="r-font" class="r-font" aria-label="Font" title="Font"><option value="">Font</option></select>
             <input id="r-size" class="r-size" type="number" min="8" max="600" aria-label="Text size in px" title="Text size (px)" />
+            <span class="seg">
+              <button class="btn" id="r-bullets" type="button" title="Bullets (Ctrl+Shift+8)" aria-label="Bullets">•</button>
+              <button class="btn" id="r-numbers" type="button" title="Numbers (Ctrl+Shift+7)" aria-label="Numbers">1.</button>
+            </span>
             <span class="seg">
               <button class="btn" id="r-left" type="button" title="Align left">L</button>
               <button class="btn" id="r-center" type="button" title="Align centre">C</button>

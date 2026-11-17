@@ -10,6 +10,7 @@
 
 import './stage.css';
 import { isMarkdown, toSectionHtml } from '../../plugins/slide-format.js';
+import { pdfPageRatio } from '../pdf.js';
 
 const STAGE_W = 1920;
 const INLINE = new Set(['EM', 'STRONG', 'B', 'I', 'U', 'SPAN', 'CODE', 'BR', 'A', 'SMALL', 'SUB', 'SUP', 'MARK']);
@@ -99,7 +100,11 @@ export function initStage(ctx) {
   const canSetWidth = (el) => !isBox(el) && !['TD', 'TH', 'TR', 'TBODY', 'THEAD', 'IMG'].includes(el.tagName);
   // The <code> of a code block, when `el` is the block (its panel or its <pre>).
   const codeOf = (el) => (el.matches('.code-panel, pre') ? el.querySelector('code') : null);
-  const imgOf = (el) => (el.tagName === 'IMG' ? el : el.tagName === 'FIGURE' ? el.querySelector('img') : null);
+  // A PDF box also holds an <img> (its page picture), but that is drawn by the
+  // deck and is not part of the file, so it does not count as an image.
+  const isPdf = (el) => el.hasAttribute('data-pdf');
+  const imgOf = (el) =>
+    el.tagName === 'IMG' ? el : el.tagName === 'FIGURE' && !isPdf(el) ? el.querySelector('img') : null;
 
   const srcOf = (el) => (el === live ? src : src.querySelector(`[data-eid="${el.dataset.eid}"]`));
   const liveOf = (eid) => (!eid ? null : live.dataset.eid === eid ? live : live.querySelector(`[data-eid="${eid}"]`));
@@ -218,14 +223,29 @@ export function initStage(ctx) {
     return el === live ? null : el;
   }
 
+  const isList = (el) => el?.tagName === 'UL' || el?.tagName === 'OL';
+  const inlineOnly = (el) => [...el.childNodes].every((n) => n.nodeType !== 1 || INLINE.has(n.tagName));
+
   function isTextEditable(el) {
+    // A list of plain text items is typed in as a whole, like a text box.
+    if (isList(el)) {
+      return (
+        el.children.length > 0 &&
+        [...el.children].every((li) => li.tagName === 'LI' && inlineOnly(li)) &&
+        ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())
+      );
+    }
     if (NOT_TEXT.has(el.tagName) || isShape(el) || el.closest('pre')) return false;
-    return [...el.childNodes].every((n) => n.nodeType !== 1 || INLINE.has(n.tagName));
+    return inlineOnly(el);
   }
+
+  // The list an item belongs to, when that list can be typed in.
+  const editableListOf = (el) => (el?.tagName === 'LI' && isList(el.parentElement) && isTextEditable(el.parentElement) ? el.parentElement : null);
 
   function label(el) {
     const cls = [...el.classList].filter((c) => c !== 'box' && c !== 'shape' && !c.startsWith('fx-'))[0];
     if (codeOf(el)) return 'code block';
+    if (isPdf(el)) return 'pdf';
     const kind = isBox(el) ? (el.tagName === 'IMG' ? 'image' : isShape(el) ? 'shape' : 'text box') : el.tagName.toLowerCase();
     return cls ? `${kind} .${cls}` : kind;
   }
@@ -338,10 +358,16 @@ export function initStage(ctx) {
       box: isBox(el),
       shape: isShape(el),
       text: isTextEditable(el),
+      list: isList(el) ? el.tagName.toLowerCase() : editableListOf(el)?.tagName.toLowerCase() || '',
+      canList: (isTextEditable(el) && (isList(el) || !NOT_TEXT.has(el.tagName))) || !!editableListOf(el),
       image: !!img,
       src: img?.getAttribute('src') || '',
       alt: img?.getAttribute('alt') || '',
-      zoom: img?.hasAttribute('data-zoom') ? img.getAttribute('data-zoom') || 'grow' : '',
+      zoom: (() => {
+        const target = img || (isPdf(el) ? el : null);
+        return target?.hasAttribute('data-zoom') ? target.getAttribute('data-zoom') || 'grow' : '';
+      })(),
+      pdf: isPdf(el) ? { src: el.getAttribute('data-pdf'), page: parseInt(el.getAttribute('data-page'), 10) || 1 } : null,
       geo: geometry(el),
       offset: getOffset(el),
       hasParent: el.parentElement !== live,
@@ -403,6 +429,7 @@ export function initStage(ctx) {
   // ---- Typing in place ------------------------------------------------------
 
   function startEdit(el, point) {
+    el = editableListOf(el) || el;
     if (!isTextEditable(el)) return;
     select(el);
     editing = el;
@@ -416,6 +443,14 @@ export function initStage(ctx) {
     if (range && el.contains(range.startContainer)) {
       sel.removeAllRanges();
       sel.addRange(range);
+    } else if (isList(el)) {
+      // A list starts with the caret after its last item, so Enter adds one.
+      // (Selecting everything would let the next key replace every item.)
+      const end = doc.createRange();
+      end.selectNodeContents(el.querySelector('li:last-child') || el);
+      end.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(end);
     } else {
       sel.selectAllChildren(el);
     }
@@ -445,8 +480,32 @@ export function initStage(ctx) {
     return box.innerHTML.replace(/&nbsp;/g, ' ');
   }
 
+  // The items of a list after typing in it, as clean inline HTML each.
+  // The browser may leave <div>, <br> or loose text between items: each of
+  // those becomes an item, empty ones are dropped.
+  function listItems(el) {
+    const items = [];
+    const box = el.cloneNode(true);
+    for (const node of [...box.childNodes]) {
+      if (node.nodeType === 3) {
+        const text = node.textContent.trim();
+        if (text) items.push(text.replace(/&/g, '&amp;').replace(/</g, '&lt;'));
+      } else if (node.nodeType === 1) {
+        if (isList(node)) node.querySelectorAll('li').forEach((li) => items.push(cleanInline(li)));
+        else items.push(cleanInline(node));
+      }
+    }
+    return items.map((html) => html.trim()).filter((html) => html.replace(/<br\s*\/?>/gi, '').trim());
+  }
+
+  const listHtml = (items) => `\n${items.map((html) => `    <li>${html}</li>`).join('\n')}\n  `;
+  const cleanList = (el) => listHtml(listItems(el));
+
+  let lastCommit = { eid: null, t: 0 }; // to resume typing after a list button click
+
   function commitEdit() {
     if (!editing) return;
+    lastCommit = { eid: editing.dataset.eid, t: performance.now() };
     const el = editing;
     editing = null;
     el.removeAttribute('contenteditable');
@@ -455,8 +514,9 @@ export function initStage(ctx) {
     doc.getSelection().removeAllRanges();
 
     const twin = srcOf(el);
-    const html = cleanInline(el);
-    const before = cleanInline(twin);
+    const clean = isList(el) ? cleanList : cleanInline;
+    const html = clean(el);
+    const before = twin ? clean(twin) : html;
     if (twin && html !== before) {
       undoStack.push(editStart);
       redoStack.length = 0;
@@ -623,6 +683,23 @@ export function initStage(ctx) {
     if (editing && e.target === editing) commitEdit();
   });
 
+  // Typing "- ", "* " or "1. " at the very start of a text box turns it into
+  // a list, as in PowerPoint.
+  doc.addEventListener('input', (e) => {
+    // (A pasted or auto-typed '- ' arrives in one piece, a typed one as '-' then ' '.)
+    if (!editing || isList(editing) || e.inputType !== 'insertText' || !e.data?.endsWith(' ')) return;
+    const sel = doc.getSelection();
+    if (!sel.rangeCount || !editing.contains(sel.anchorNode)) return;
+    const typed = doc.createRange();
+    typed.setStart(editing, 0);
+    typed.setEnd(sel.anchorNode, sel.anchorOffset);
+    const before = typed.toString();
+    const kind = /^[-*•–]\s$/.test(before) ? 'ul' : /^1[.)]\s$/.test(before) ? 'ol' : null;
+    if (!kind) return;
+    typed.deleteContents(); // the marker itself is not text
+    api.setList(kind, { caretAtStart: true });
+  });
+
   doc.addEventListener('paste', (e) => {
     if (!editing) return;
     e.preventDefault();
@@ -639,6 +716,32 @@ export function initStage(ctx) {
       e.preventDefault();
       commitEdit();
       return emit('save');
+    }
+
+    // Ctrl+Shift+8 bullets, Ctrl+Shift+7 numbers (while typing or on a selection).
+    if (mod && e.shiftKey && (e.code === 'Digit8' || e.code === 'Digit7')) {
+      e.preventDefault();
+      return api.setList(e.code === 'Digit8' ? 'ul' : 'ol');
+    }
+
+    if (editing && isList(editing)) {
+      // In a list Enter starts the next item; Enter on an empty item ends the list.
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        commitEdit();
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        const node = doc.getSelection().anchorNode;
+        const li = (node?.nodeType === 1 ? node : node?.parentElement)?.closest('li');
+        if (li && editing.contains(li) && !li.textContent.trim()) {
+          e.preventDefault();
+          li.remove();
+          commitEdit();
+        }
+      } else if (e.key === 'Tab') {
+        e.preventDefault(); // no nested lists in this deck; keep typing here
+      }
+      if (mod && key === 'u') e.preventDefault();
+      return;
     }
 
     if (editing) {
@@ -714,7 +817,7 @@ export function initStage(ctx) {
     dropHint.classList.remove('is-on');
     if (!src || !hasFiles(e)) return;
     e.preventDefault();
-    const image = [...e.dataTransfer.files].find((f) => f.type.startsWith('image/'));
+    const image = [...e.dataTransfer.files].find((f) => f.type.startsWith('image/') || f.type === 'application/pdf');
     if (!image) return;
     const s = live.getBoundingClientRect();
     emit('dropfile', image, { x: round((e.clientX - s.left) / scale()), y: round((e.clientY - s.top) / scale()) });
@@ -850,7 +953,14 @@ export function initStage(ctx) {
         emit('renamed', file);
       }
       const external = mine && !sameAsSaved(mine);
-      ctx.slidesEl.replaceChildren(...list.flatMap((s) => (s === mine && !external && kept.length ? kept : ctx.sectionsFor(s.file, s.html))));
+      const next = list.flatMap((s) => (s === mine && !external && kept.length ? kept : ctx.sectionsFor(s.file, s.html)));
+      // Swap the other slides around the one being edited without taking it
+      // out of the page: detaching it would end typing in it after every save.
+      const parent = ctx.slidesEl;
+      [...parent.children].forEach((child) => !next.includes(child) && child.remove());
+      next.forEach((node, i) => {
+        if (parent.children[i] !== node) parent.insertBefore(node, parent.children[i] || null);
+      });
       ctx.refresh();
       if (mine) ctx.gotoFile(file);
       updateOverlay();
@@ -874,7 +984,17 @@ export function initStage(ctx) {
       let x = opts.x ?? 240 + n * 32;
       let y = opts.y ?? 240 + n * 32;
       let html;
-      if (kind === 'image') {
+      if (kind === 'pdf') {
+        // Sized from the PDF's first page: 640 px wide, or 760 px tall if it is upright.
+        const { ratio } = await pdfPageRatio(opts.src).catch(() => ({ ratio: 210 / 297 }));
+        let w = ratio >= 1 ? 760 : Math.round(760 * ratio);
+        let h = Math.round(w / ratio);
+        if (opts.x != null) {
+          x -= w / 2;
+          y -= h / 2;
+        }
+        html = `<figure class="box pdf" data-pdf="${escAttr(opts.src)}" data-page="1" data-zoom="scale" style="left: ${round(x)}px; top: ${round(y)}px; width: ${w}px; height: ${h}px"></figure>`;
+      } else if (kind === 'image') {
         const size = await naturalSize(opts.src);
         const w = Math.min(size.w, 720);
         if (opts.x != null) {
@@ -1147,12 +1267,88 @@ export function initStage(ctx) {
       changed();
     },
 
+    /**
+     * Bullets ('ul') or numbers ('ol') on a text element. Asking for the kind
+     * it already has turns the list back into plain lines of text.
+     */
+    setList(kind, { caretAtStart = false } = {}) {
+      if (!src) return;
+      let el = editing || selected;
+      if (!el) return;
+      el = editableListOf(el) || el;
+      if (!isTextEditable(el) || (!isList(el) && NOT_TEXT.has(el.tagName))) return;
+
+      const resume = !!editing || (lastCommit.eid === el.dataset.eid && performance.now() - lastCommit.t < 1000);
+      const before = editing ? editStart : raw();
+      const look = readLook(el, false);
+      delete look['min-height']; // an empty box gets one from the editor itself, not from the slide
+      const lines = isList(el) ? listItems(el) : cleanInline(el).split(/<br\s*\/?>/i).map((l) => l.trim()).filter(Boolean);
+      if (editing) {
+        // Stop typing without the usual clean-up: an emptied box must not vanish here.
+        editing = null;
+        el.removeAttribute('contenteditable');
+        el.classList.remove('fx-editing');
+      }
+
+      const twin = srcOf(el);
+      const current = isList(el) ? el.tagName.toLowerCase() : null;
+      const target = kind === current ? null : kind;
+      const fresh = doc.createElement(target || twin.dataset.textTag || 'p');
+      for (const attr of twin.attributes) fresh.setAttribute(attr.name, attr.value);
+      if (target) {
+        if (!current) fresh.dataset.textTag = twin.tagName.toLowerCase(); // to turn it back later
+        fresh.innerHTML = listHtml(lines.length ? lines : ['<br>']);
+      } else {
+        fresh.removeAttribute('data-text-tag');
+        fresh.innerHTML = lines.join('<br>');
+      }
+      if (fresh.getAttribute('class') === '') fresh.removeAttribute('class');
+
+      undoStack.push(before);
+      redoStack.length = 0;
+      snapKey = '';
+      twin.replaceWith(fresh);
+      tagAll(fresh);
+      rerender();
+      selected = liveOf(fresh.dataset.eid);
+      // A heading turned into a list keeps its size, weight and colour.
+      if (selected) applyLooks(selected, [look]);
+      changed();
+
+      if (resume && selected) {
+        startEdit(selected);
+        const spot = target
+          ? selected.querySelector(caretAtStart ? 'li' : 'li:last-child')
+          : selected;
+        if (spot) {
+          const range = doc.createRange();
+          range.selectNodeContents(spot);
+          range.collapse(caretAtStart);
+          const sel = doc.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      }
+    },
+
     /** Click to enlarge: '' turns it off, otherwise the name of the animation. */
     setZoom(name) {
-      const img = selected && imgOf(selected);
+      const img = selected && (imgOf(selected) || (isPdf(selected) ? selected : null));
       if (!img) return;
       snapshot(`zoom:${selected.dataset.eid}`);
       both(img, (e) => (name ? e.setAttribute('data-zoom', name) : e.removeAttribute('data-zoom')));
+      changed();
+    },
+
+    /** A PDF box: which file, and which page it shows on the slide. */
+    setPdf({ src: url, page }) {
+      if (!selected || !isPdf(selected)) return;
+      snapshot(`pdf:${selected.dataset.eid}`);
+      both(selected, (e) => {
+        if (url != null) e.setAttribute('data-pdf', url);
+        if (page != null) e.setAttribute('data-page', String(Math.max(1, Math.round(page))));
+      });
+      rerender(); // draws the new page
       changed();
     },
 

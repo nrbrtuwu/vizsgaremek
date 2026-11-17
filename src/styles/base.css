@@ -195,6 +195,29 @@ body {
   background: var(--violet);
 }
 
+/* Numbered lists: mono numbers in the accent colour, in the dash's place.
+   (The timeline layout draws its own markers.) */
+.reveal ol:not(.timeline) {
+  counter-reset: item;
+}
+
+.reveal ol:not(.timeline) > li {
+  position: relative;
+  padding-left: 1.7em;
+  counter-increment: item;
+}
+
+.reveal ol:not(.timeline) > li::before {
+  content: counter(item) '.';
+  position: absolute;
+  left: 0;
+  top: 0.12em;
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  font-weight: 500;
+  color: var(--violet-text);
+}
+
 .reveal li + li {
   margin-top: 0.45em;
 }

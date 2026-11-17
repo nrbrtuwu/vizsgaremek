@@ -47,11 +47,13 @@ Open http://127.0.0.1:5173/editor while `npm run dev` is running. It works like 
 | Select something | Click it |
 | Change text | Double-click it and type. `Enter` or `Esc` finishes, `Shift+Enter` makes a new line |
 | Bold / serif italic while typing | `Ctrl+B` / `Ctrl+I` |
+| Bullet or numbered list | Start a text box with `- ` or `1. ` while typing, or press **•** / **1.** in the Text group (`Ctrl+Shift+8` / `Ctrl+Shift+7`). In a list, `Enter` adds the next item and `Enter` on an empty item ends the list. Pressing the same button again turns it back into plain lines |
 | Move | Drag. Arrow keys move 1 px, with `Shift` 10 px. `Shift` while dragging keeps one direction |
 | Resize | Drag a handle. Text that belongs to a layout has side handles for its width; free boxes resize freely (see below) |
 | Snap while moving or resizing | **Snap on / off** in the top bar. Hold `Alt` to switch it off for one drag |
 | Add a text box, heading, rectangle, code block | **Insert** group in the top bar |
 | Add an image | **Image** in the top bar: pick one from `assets/` or upload from the computer. Or drop an image file onto the slide |
+| Add a PDF | **PDF** in the top bar, the same way. Or drop a PDF file onto the slide |
 | Undo / redo | `Ctrl+Z` / `Ctrl+Y` |
 | Copy / cut / paste, also to another slide | `Ctrl+C` / `Ctrl+X` / `Ctrl+V`, or **Copy** and **Paste** in the top bar |
 | Duplicate / delete the selection | `Ctrl+D` / `Delete` |
@@ -208,6 +210,15 @@ Any image can open large when clicked during the talk.
 
 Click the large image, or press `Esc`, to close it. Next / previous on the keyboard or clicker closes it and moves on. With the keyboard: Tab to the image, `Enter` opens and closes.
 
+While it is open you can zoom in further:
+
+- **Scroll wheel** (or trackpad pinch) zooms in and out around the mouse pointer, up to 8x.
+- **Drag** moves around the zoomed image. It never slides off the screen.
+- `+` / `-` zoom on the middle of the screen, `0` goes back to the whole image.
+- A small label at the bottom shows the zoom level.
+
+The zoom limit and wheel speed are `MAX_ZOOM` and `WHEEL_SPEED` at the top of `src/zoom.js`.
+
 Speed, easing and the darkness behind the image are `--zoom-duration`, `--zoom-ease` and `--zoom-backdrop` at the top of `animations.css`. The four presets are in section 5 of that file; a new one is one rule:
 
 ```css
@@ -217,6 +228,31 @@ Speed, easing and the darkness behind the image are `--zoom-duration`, `--zoom-e
 ```
 
 Then use `data-zoom="drop"`. (The editor's list shows the four built-in ones; a custom name is typed in the Code tab.)
+
+### PDFs
+
+A PDF goes on a slide like an image: **PDF** in the editor's Insert group (pick one from `assets/` or upload it), or drop the file onto the slide.
+
+- On the slide it shows one page, with a small "PDF · 12 pages" label. **Page shown on the slide** on the right picks which page. Resize the box like any other.
+- With **Open the whole PDF when clicked** on (it is on for new PDFs), clicking it during the talk opens every page in a scrollable view.
+
+In the open view:
+
+| To do this | Do this |
+| --- | --- |
+| Read on | Scroll, or `Page Down` / `Space` (the clicker's "next" scrolls the PDF instead of changing slide) |
+| Zoom | `Ctrl` + scroll, trackpad pinch, `+` / `-`, or the buttons at the top. `0` fits the width again |
+| Close | `Esc`, **Close**, or a click on the dark area beside the pages |
+| Go to the next slide | `→` closes the PDF and moves on |
+
+It opens on the page the slide shows, and draws pages only as they come near the screen, so long PDFs open quickly. pdf.js is bundled, so this works offline. By hand it looks like this:
+
+```html
+<figure class="box pdf" data-pdf="/assets/report.pdf" data-page="1" data-zoom="scale"
+        style="left: 200px; top: 160px; width: 537px; height: 760px"></figure>
+```
+
+`data-zoom` is how it opens (`scale`, `fade` or `rise`); leave it out and the PDF only shows its page. The page picture is drawn when the deck loads and is never written into the file.
 
 ### Element presets
 
@@ -301,6 +337,7 @@ assets/                 images
 src/main.js             reveal.js setup, hot reload of slides
 src/morph.js            the morph transition (object matching, on top of reveal.js auto-animate)
 src/zoom.js             click an image to enlarge it
+src/pdf.js              PDFs on slides and the PDF viewer (styles: src/styles/pdf.css)
 src/background/         config.js, the shader, the tween, easings
 src/styles/
   tokens.css            colours, fonts, sizes, grid

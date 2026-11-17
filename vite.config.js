@@ -14,6 +14,11 @@ function copyAssets() {
     closeBundle() {
       const from = resolve(root, 'assets');
       if (existsSync(from)) cpSync(from, resolve(root, 'dist/assets'), { recursive: true });
+      // Data files pdf.js loads while it reads a PDF (fonts, character maps).
+      for (const dir of ['cmaps', 'standard_fonts', 'wasm', 'iccs']) {
+        const src = resolve(root, 'node_modules/pdfjs-dist', dir);
+        if (existsSync(src)) cpSync(src, resolve(root, 'dist/pdfjs', dir), { recursive: true });
+      }
     },
   };
 }

@@ -400,6 +400,57 @@
     opacity var(--zoom-duration) ease;
 }
 
+/* Scroll-wheel zoom of the open image (src/zoom.js). */
+.zoom-pan {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  transition: transform 140ms ease-out;
+}
+
+.zoom-pan.is-dragging {
+  transition: none;
+}
+
+/* No browser image drag or text selection inside the enlarged view. */
+.zoom-layer,
+.zoom-layer img {
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+.zoom-layer.is-zoomed {
+  cursor: grab;
+}
+
+.zoom-layer.is-zoomed:has(.is-dragging) {
+  cursor: grabbing;
+}
+
+.zoom-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  translate: -50% 0;
+  padding: 6px 12px;
+  background: var(--black);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: pre;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 300ms ease 400ms;
+  pointer-events: none;
+}
+
+.zoom-layer.is-open .zoom-hint {
+  opacity: 1;
+}
+
 .zoom-layer.is-open {
   background: var(--zoom-backdrop);
 }

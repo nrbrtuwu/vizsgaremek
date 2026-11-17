@@ -28,6 +28,7 @@
     "@fontsource/merriweather": "^5.3.0",
     "@fontsource/poppins": "^5.3.0",
     "marked": "^18.2.0",
+    "pdfjs-dist": "^6.5.438",
     "reveal.js": "^6.0.2"
   },
   "devDependencies": {

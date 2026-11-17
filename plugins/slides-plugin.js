@@ -10,8 +10,9 @@ const VIRTUAL_ID = 'virtual:slides';
 const RESOLVED_ID = '\0' + VIRTUAL_ID;
 const FILE_RE = /^[a-z0-9][a-z0-9._-]*\.(html|md)$/i;
 
-const IMAGE_RE = /\.(png|jpe?g|gif|webp|avif|svg)$/i;
-const MAX_UPLOAD = 30 * 1024 * 1024;
+// Files the editor can upload into assets/: images and PDFs.
+const IMAGE_RE = /\.(png|jpe?g|gif|webp|avif|svg|pdf)$/i;
+const MAX_UPLOAD = 80 * 1024 * 1024;
 
 const NEW_HTML =`<section data-layout="blank">
   <h2>New slide</h2>
@@ -171,7 +172,7 @@ export default function slidesPlugin() {
 
     const wanted = new URL(req.url, 'http://localhost').searchParams.get('name') || 'image.png';
     const ext = (wanted.match(IMAGE_RE)?.[1] || '').toLowerCase();
-    if (!ext) throw httpError(415, 'Only png, jpg, gif, webp, avif and svg images');
+    if (!ext) throw httpError(415, 'Only png, jpg, gif, webp, avif, svg images and pdf files');
 
     const base = slugify(wanted.replace(IMAGE_RE, ''));
     fs.mkdirSync(assetsDir, { recursive: true });

@@ -205,7 +205,7 @@ let slideInfo = null;
 
 function setVisual(visual) {
   state.visual = visual;
-  for (const id of ['add-text', 'add-heading', 'add-image', 'add-rect', 'add-code']) $(id).disabled = !visual;
+  for (const id of ['add-text', 'add-heading', 'add-image', 'add-pdf', 'add-rect', 'add-code']) $(id).disabled = !visual;
   $('stage-hint').textContent = visual
     ? 'Click to select. Double-click to type. Drag to move.'
     : 'This slide is edited in the Code tab.';
@@ -256,7 +256,9 @@ function attachStage() {
   stage.on('copy', () => copySelection());
   stage.on('cut', () => copySelection({ cut: true }));
   stage.on('paste', pasteClipboard);
-  stage.on('dropfile', (file, at) => guard(async () => stage.insert('image', { src: await upload(file), ...at })));
+  stage.on('dropfile', (file, at) =>
+    guard(async () => stage.insert(file.type === 'application/pdf' ? 'pdf' : 'image', { src: await upload(file), ...at })),
+  );
 
   if (state.current) select(state.current, { reload: true });
 }
@@ -460,8 +462,9 @@ function elementPanels() {
   }
 
   if (selection.code) panels.push(codePanel());
+  if (selection.pdf) panels.push(...pdfPanels());
 
-  if (!selection.image && !selection.shape && !selection.code) {
+  if (!selection.image && !selection.shape && !selection.code && !selection.pdf) {
     const aligns = ['left', 'center', 'right'].map((value) => {
       const b = button(value[0].toUpperCase() + value.slice(1), () => stage.setStyle('text-align', value));
       bindings.push(() => b.classList.toggle('is-on', s().style.textAlign === value));
@@ -483,8 +486,23 @@ function elementPanels() {
         ),
         fontField(),
         h('div', { class: 'field' }, 'Align', h('div', { class: 'row' }, aligns)),
+        s().canList &&
+          h(
+            'div',
+            { class: 'field' },
+            'List',
+            h(
+              'div',
+              { class: 'row' },
+              ['ul', 'ol'].map((kind) => {
+                const b = button(kind === 'ul' ? 'Bullets' : 'Numbers', () => stage.setList(kind));
+                bindings.push(() => b.classList.toggle('is-on', s().list === kind));
+                return b;
+              }),
+            ),
+          ),
         swatches('Colour', TEXT_COLORS, () => s().style.color, (c) => stage.setStyle('color', c)),
-        h('p', {}, 'While typing: ', h('kbd', {}, 'Ctrl+B'), ' bold, ', h('kbd', {}, 'Ctrl+I'), ' serif italic, ', h('kbd', {}, 'Shift+Enter'), ' new line.'),
+        h('p', {}, 'While typing: ', h('kbd', {}, 'Ctrl+B'), ' bold, ', h('kbd', {}, 'Ctrl+I'), ' serif italic, ', h('kbd', {}, 'Shift+Enter'), ' new line. Start a line with ', h('kbd', {}, '- '), ' or ', h('kbd', {}, '1. '), ' for a list.'),
       ),
     );
   }
@@ -521,6 +539,44 @@ function elementPanels() {
     ),
   );
   return panels;
+}
+
+// A PDF box: file, the page shown on the slide, and opening on click.
+function pdfPanels() {
+  const s = () => selection.pdf || {};
+  const name = h('p', {});
+  bindings.push(() => (name.textContent = decodeURIComponent((s().src || '').split('/').pop())));
+
+  let lastZoom = selection.zoom || 'scale';
+  const on = h('input', { type: 'checkbox', onchange: () => stage.setZoom(on.checked ? lastZoom : '') });
+  const how = selectField(
+    'Opens with',
+    ZOOMS.map(([value, label]) => [value, value === 'grow' ? 'Scale up' : label]).filter(([value]) => value !== 'grow'),
+    () => (selection.zoom === 'grow' ? 'scale' : selection.zoom || lastZoom),
+    (value) => {
+      lastZoom = value;
+      stage.setZoom(value);
+    },
+  );
+  bindings.push(() => {
+    if (selection.zoom) lastZoom = selection.zoom;
+    how.hidden = !selection.zoom;
+  });
+
+  return [
+    group(
+      'PDF',
+      name,
+      button('Replace PDF', () => openImages('replace-pdf')),
+      numberField('Page shown on the slide', () => s().page, (page) => stage.setPdf({ page }), { min: 1 }),
+    ),
+    group(
+      'Open when clicked',
+      h('label', { class: 'check' }, bind(on, () => !!selection.zoom, 'checked'), 'Open the whole PDF when clicked'),
+      how,
+      h('p', {}, 'In the deck: scroll to read, Ctrl + scroll or + / - to zoom, Esc to close. Not here: press Present.'),
+    ),
+  ];
 }
 
 function fontField() {
@@ -627,7 +683,9 @@ function renderInspector(rebuild) {
 
 // ---- Images ---------------------------------------------------------------
 
-let imageMode = 'insert'; // insert | replace | background
+let imageMode = 'insert'; // insert | replace | background | pdf | replace-pdf
+const isPdfMode = () => imageMode === 'pdf' || imageMode === 'replace-pdf';
+const IMAGE_TYPES = 'image/png,image/jpeg,image/gif,image/webp,image/avif,image/svg+xml';
 
 async function upload(file) {
   const res = await fetch(`/api/assets?name=${enc(file.name)}`, {
@@ -642,7 +700,9 @@ async function upload(file) {
 
 function useImage(url) {
   $('image-panel').hidden = true;
-  if (imageMode === 'replace') stage.setImage(url);
+  if (imageMode === 'pdf') stage.insert('pdf', { src: url });
+  else if (imageMode === 'replace-pdf') stage.setPdf({ src: url, page: 1 });
+  else if (imageMode === 'replace') stage.setImage(url);
   else if (imageMode === 'background') {
     stage.setSlide('data-background-image', url);
     stage.setSlide('data-background-size', 'cover');
@@ -651,25 +711,30 @@ function useImage(url) {
 
 async function openImages(mode) {
   imageMode = mode;
-  $('image-panel-title').textContent = { insert: 'Add image', replace: 'Replace image', background: 'Full-screen image' }[mode];
+  $('image-panel-title').textContent = { insert: 'Add image', replace: 'Replace image', background: 'Full-screen image', pdf: 'Add PDF', 'replace-pdf': 'Replace PDF' }[mode];
+  $('image-file').accept = isPdfMode() ? 'application/pdf,.pdf' : IMAGE_TYPES;
   $('image-panel').hidden = false;
   await guard(async () => {
     const res = await fetch('/api/assets');
     const { assets } = await res.json();
+    // PDFs in the PDF panel, pictures in the others.
+    const files = assets.filter((name) => /\.pdf$/i.test(name) === isPdfMode());
     $('image-grid').replaceChildren(
-      ...assets.map((name) =>
+      ...files.map((name) =>
         h(
           'button',
           { type: 'button', class: 'thumb', title: name, onclick: () => useImage(`/assets/${name}`) },
-          h('img', { src: `/assets/${name}`, alt: '', loading: 'lazy' }),
+          isPdfMode() ? h('span', { class: 'thumb-pdf' }, 'PDF') : h('img', { src: `/assets/${name}`, alt: '', loading: 'lazy' }),
           h('span', {}, name),
         ),
       ),
+      ...(files.length ? [] : [h('p', { class: 'hint' }, isPdfMode() ? 'No PDFs in assets/ yet. Upload one.' : 'No images in assets/ yet. Upload one.')]),
     );
   });
 }
 
-$('add-image').addEventListener('click', () => ($('image-panel').hidden ? openImages('insert') : ($('image-panel').hidden = true)));
+$('add-image').addEventListener('click', () => ($('image-panel').hidden || imageMode !== 'insert' ? openImages('insert') : ($('image-panel').hidden = true)));
+$('add-pdf').addEventListener('click', () => ($('image-panel').hidden || imageMode !== 'pdf' ? openImages('pdf') : ($('image-panel').hidden = true)));
 $('image-close').addEventListener('click', () => ($('image-panel').hidden = true));
 $('image-upload').addEventListener('click', () => $('image-file').click());
 $('image-file').addEventListener('change', (event) => {
@@ -747,10 +812,12 @@ $('r-size').addEventListener('input', () => {
 $('r-transition').append(...TRANSITIONS.map((v) => h('option', { value: v }, v || 'Default')));
 $('r-transition').addEventListener('change', () => stage?.setSlide('data-transition', $('r-transition').value));
 ['left', 'center', 'right'].forEach((value) => $('r-' + value).addEventListener('click', () => stage?.setStyle('text-align', value)));
+$('r-bullets').addEventListener('click', () => stage?.setList('ul'));
+$('r-numbers').addEventListener('click', () => stage?.setList('ol'));
 
 function updateRibbon() {
   const sel = state.visual ? selection : null;
-  const textual = !!sel && !sel.image && !sel.shape && !sel.code;
+  const textual = !!sel && !sel.image && !sel.shape && !sel.code && !sel.pdf;
   $('copy').disabled = $('del').disabled = !sel;
   $('paste').disabled = !state.visual || !clipboard;
   $('front').disabled = $('back').disabled = !sel?.box;
@@ -763,6 +830,9 @@ function updateRibbon() {
   set($('r-size'), textual ? String(sel.style.fontSize) : '');
   set($('r-transition'), slideInfo?.transition || '');
   for (const value of ['left', 'center', 'right']) $('r-' + value).classList.toggle('is-on', textual && sel.style.textAlign === value);
+  $('r-bullets').disabled = $('r-numbers').disabled = !sel?.canList;
+  $('r-bullets').classList.toggle('is-on', sel?.list === 'ul');
+  $('r-numbers').classList.toggle('is-on', sel?.list === 'ol');
 }
 $('undo').addEventListener('click', () => stage?.undo());
 $('redo').addEventListener('click', () => stage?.redo());
